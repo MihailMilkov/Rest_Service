@@ -1,0 +1,94 @@
+class ZCL_MM_HANDLE_PUT definition
+  public
+  final
+  create public .
+
+public section.
+*"* public components of class ZCL_MM_HANDLE_PUT
+*"* do not include other source files here!!!
+
+  interfaces ZIF_REQUEST_HANDLER .
+
+  methods CONSTRUCTOR
+    importing
+      !IO_REQUEST type ref to IF_HTTP_REQUEST
+      !IO_RESPONSE type ref to IF_HTTP_RESPONSE .
+protected section.
+*"* protected components of class ZCL_MM_HANDLE_PUT
+*"* do not include other source files here!!!
+private section.
+*"* private components of class ZCL_MM_HANDLE_PUT
+*"* do not include other source files here!!!
+
+  aliases REQUEST
+    for ZIF_REQUEST_HANDLER~REQUEST .
+  aliases RESPONSE
+    for ZIF_REQUEST_HANDLER~RESPONSE .
+ENDCLASS.
+
+
+
+CLASS ZCL_MM_HANDLE_PUT IMPLEMENTATION.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method ZCL_MM_HANDLE_PUT->CONSTRUCTOR
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] IO_REQUEST                     TYPE REF TO IF_HTTP_REQUEST
+* | [--->] IO_RESPONSE                    TYPE REF TO IF_HTTP_RESPONSE
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+method CONSTRUCTOR.
+
+  me->request = io_request.
+  me->response = io_response.
+
+endmethod.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method ZCL_MM_HANDLE_PUT->ZIF_REQUEST_HANDLER~HANDLE_REQUEST
+* +-------------------------------------------------------------------------------------------------+
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+method ZIF_REQUEST_HANDLER~HANDLE_REQUEST.
+
+ constants: lv_directory type string value '/SAP/PUBLIC/Test/'.
+
+ data: lv_num_multiparts type i,
+       lo_entity type ref to IF_HTTP_ENTITY,
+       lv_file type xstring,
+       lv_filename type string,
+       lv_url type string.
+
+ data: lo_mime_api type ref to IF_MR_API.
+
+ lo_mime_api = CL_MIME_REPOSITORY_API=>get_api( ).
+
+ lv_num_multiparts = request->NUM_MULTIPARTS( ).
+
+ if lv_num_multiparts is not initial.
+   do lv_num_multiparts times.
+
+    clear lv_url.
+
+    lo_entity = request->get_multipart( sy-index ).
+    lv_filename = lo_entity->get_header_field( '~content_filename' ).
+    lv_file = lo_entity->get_data( ).
+    if lv_file is initial.
+      continue.
+    endif.
+
+    concatenate lv_directory lv_filename into lv_url.
+
+    lo_mime_api->put( exporting i_url = lv_url
+                                I_SUPPRESS_DIALOGS = 'X'
+                                i_content = lv_file ).
+
+   enddo.
+   response->SET_STATUS( exporting code = 200
+                                   reason = 'Files uploaded succesfully!' ).
+else.
+  response->SET_STATUS( exporting CODE = 400
+                                  REASON = 'No files to upload!' ).
+endif.
+endmethod.
+ENDCLASS.

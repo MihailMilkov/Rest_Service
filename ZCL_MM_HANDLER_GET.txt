@@ -1,0 +1,178 @@
+class ZCL_MM_HANDLE_GET definition
+  public
+  final
+  create public .
+
+public section.
+*"* public components of class ZCL_MM_HANDLE_GET
+*"* do not include other source files here!!!
+
+  interfaces ZIF_REQUEST_HANDLER .
+
+  methods CONSTRUCTOR
+    importing
+      !IO_REQUEST type ref to IF_HTTP_REQUEST
+      !IO_RESPONSE type ref to IF_HTTP_RESPONSE .
+protected section.
+*"* protected components of class ZCL_MM_HANDLE_GET
+*"* do not include other source files here!!!
+private section.
+*"* private components of class ZCL_MM_HANDLE_GET
+*"* do not include other source files here!!!
+
+  aliases REQUEST
+    for ZIF_REQUEST_HANDLER~REQUEST .
+  aliases RESPONSE
+    for ZIF_REQUEST_HANDLER~RESPONSE .
+
+  methods CREATE_ZIP
+    exporting
+      !EV_ZIP type XSTRING .
+  methods GET_FILES
+    exporting
+      !ET_FILES_LIST type STRING_TABLE .
+ENDCLASS.
+
+
+
+CLASS ZCL_MM_HANDLE_GET IMPLEMENTATION.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method ZCL_MM_HANDLE_GET->CONSTRUCTOR
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] IO_REQUEST                     TYPE REF TO IF_HTTP_REQUEST
+* | [--->] IO_RESPONSE                    TYPE REF TO IF_HTTP_RESPONSE
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+method CONSTRUCTOR.
+
+  me->request = io_request.
+  me->response = io_response.
+
+endmethod.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Private Method ZCL_MM_HANDLE_GET->CREATE_ZIP
+* +-------------------------------------------------------------------------------------------------+
+* | [<---] EV_ZIP                         TYPE        XSTRING
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+method create_zip.
+
+  data: lo_zip type ref to cl_abap_zip,
+        lt_file_list type string_table,
+        lo_mime type ref to if_mr_api.
+
+  data: lv_file_xstr type xstring,
+        lt_file_path type string_table,
+        lv_file_name type string,
+        lv_file_path_lines type i.
+
+
+  data: lv_zip type xstring.
+
+  field-symbols: <ls_file_url> like line of lt_file_list.
+
+  create object lo_zip.
+
+  get_files( importing et_files_list = lt_file_list ).
+  lo_mime = cl_mime_repository_api=>get_api( ).
+
+  if lt_file_list is not initial.
+   loop at lt_file_list assigning <ls_file_url>.
+
+        lo_mime->get( exporting i_url = <ls_file_url>
+                      importing e_content = lv_file_xstr
+                      exceptions parameter_missing = 1
+                                 error_occured = 2
+                                 not_found = 3
+                                 permission_failure = 4
+                                 others = 5 ).
+
+        if sy-subrc is not initial.
+          case sy-subrc.
+            when 1.
+                response->set_status( exporting code = 400
+                                  reason = 'MIME Repository - parameter missing!' ).
+                return.
+            when 2.
+                response->set_status( exporting code = 400
+                                reason = 'MIME Repository - error occured' ).
+                return.
+            when 3.
+                response->set_status( exporting code = 404
+                                reason = 'Object not found in MIME Repository!' ).
+                return.
+            when 4.
+                response->set_status( exporting code = 401
+                                  reason = 'MIME Repository - authorization error!' ).
+                return.
+            when 5.
+                response->set_status( exporting code = 400
+                                  reason = 'Error occured in MIME Repository!' ).
+                return.
+          endcase.
+        endif.
+
+        split <ls_file_url> at '/' into table lt_file_path.
+        describe table lt_file_path lines lv_file_path_lines.
+        read table lt_file_path into lv_file_name index
+          lv_file_path_lines.
+
+        lo_zip->add( exporting name = lv_file_name
+                               content = lv_file_xstr ).
+   endloop.
+
+   ev_zip = lo_zip->save( ).
+
+  else.
+    response->set_status( exporting code = 404
+                                    reason = 'Files not found!' ).
+  endif.
+
+endmethod.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Private Method ZCL_MM_HANDLE_GET->GET_FILES
+* +-------------------------------------------------------------------------------------------------+
+* | [<---] ET_FILES_LIST                  TYPE        STRING_TABLE
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+method GET_FILES.
+
+  constants: lv_url type string value '/SAP/PUBLIC/Test/'.
+
+  data: lo_mime_api type ref to IF_MR_API,
+        lt_file_list type string_table.
+
+ lo_mime_api =  CL_MIME_REPOSITORY_API=>get_api( ).
+
+ lo_mime_api->file_list( exporting i_url = lv_url
+*                                   I_RECURSIVE_CALL = 'X'
+                         importing e_files = lt_file_list ).
+
+ et_files_list = lt_file_list.
+
+endmethod.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method ZCL_MM_HANDLE_GET->ZIF_REQUEST_HANDLER~HANDLE_REQUEST
+* +-------------------------------------------------------------------------------------------------+
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+method ZIF_REQUEST_HANDLER~HANDLE_REQUEST.
+
+  data: lv_zip type xstring.
+
+  data: lt_header_fields type TIHTTPNVP.
+
+  CREATE_ZIP( importing EV_ZIP = lv_zip ).
+  if lv_zip is not initial.
+    response->SET_CONTENT_TYPE( 'application/zip' ).
+    response->SET_HEADER_FIELD( exporting name = 'Content-Disposition'
+                                          value ='inline; filename=''UploadedFiles.zip''' ).
+    response->GET_HEADER_FIELDS( changing fields = lt_header_fields ).
+    response->SET_DATA( lv_zip ).
+  endif.
+endmethod.
+ENDCLASS.

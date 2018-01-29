@@ -1,0 +1,10 @@
+*"* components of interface ZIF_REQUEST_HANDLER
+interface ZIF_REQUEST_HANDLER
+  public .
+
+
+  data REQUEST type ref to IF_HTTP_REQUEST .
+  data RESPONSE type ref to IF_HTTP_RESPONSE .
+
+  methods HANDLE_REQUEST .
+endinterface.
