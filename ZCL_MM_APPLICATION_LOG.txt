@@ -1,0 +1,120 @@
+class ZCL_MM_APPLICATION_LOG definition
+  public
+  final
+  create public .
+
+public section.
+*"* public components of class ZCL_MM_APPLICATION_LOG
+*"* do not include other source files here!!!
+
+  methods ADD_LOG
+    importing
+      !IV_MESSAGE_NO type SYMSGNO
+      !IV_MESSAGE_TYPE type SYMSGTY .
+protected section.
+*"* protected components of class ZCL_MM_APPLICATION_LOG
+*"* do not include other source files here!!!
+private section.
+*"* private components of class ZCL_MM_APPLICATION_LOG
+*"* do not include other source files here!!!
+
+  data T_LOG_HANDLE type BAL_T_LOGH .
+
+  methods CREATE_LOG .
+  methods ADD_LOG_MESSAGE
+    importing
+      !IV_MESSAGE_TYPE type SYMSGTY
+      !IV_MESSAGE_NO type SYMSGNO .
+  methods SAVE_LOG .
+ENDCLASS.
+
+
+
+CLASS ZCL_MM_APPLICATION_LOG IMPLEMENTATION.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method ZCL_MM_APPLICATION_LOG->ADD_LOG
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] IV_MESSAGE_NO                  TYPE        SYMSGNO
+* | [--->] IV_MESSAGE_TYPE                TYPE        SYMSGTY
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+method ADD_LOG.
+  me->create_log( ).
+  me->add_log_message( exporting iv_message_no = iv_message_no
+                                 iv_message_type = iv_message_type ).
+  me->save_log( ).
+endmethod.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Private Method ZCL_MM_APPLICATION_LOG->ADD_LOG_MESSAGE
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] IV_MESSAGE_TYPE                TYPE        SYMSGTY
+* | [--->] IV_MESSAGE_NO                  TYPE        SYMSGNO
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+method ADD_LOG_MESSAGE.
+  constants:
+    lv_message_class type SYMSGID value 'ZREST_MSG'.
+
+  data: lv_s_msg type BAL_S_MSG,
+        lv_log_handle type BALLOGHNDL.
+
+  read table me->t_log_handle into lv_log_handle index 1.
+
+  lv_s_msg-msgty = IV_MESSAGE_TYPE.
+  lv_s_msg-msgid = lv_message_class.
+  lv_s_msg-msgno = IV_MESSAGE_NO.
+
+  call function 'BAL_LOG_MSG_ADD'
+    exporting
+      I_LOG_HANDLE              = lv_log_handle
+      i_s_msg                   = lv_s_msg.
+
+
+endmethod.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Private Method ZCL_MM_APPLICATION_LOG->CREATE_LOG
+* +-------------------------------------------------------------------------------------------------+
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+method create_log.
+
+  constants:
+    lv_object type string value 'ZREST_LOG',
+    lv_subobject type string value 'ZREST_LOG_01',
+    lv_alprog type string value 'MIME Web Service'.
+
+  data: ls_log type bal_s_log,
+        lv_log_handle type balloghndl.
+
+  ls_log-object = lv_object.
+  ls_log-subobject = lv_subobject.
+  ls_log-aldate = sy-datlo.
+  ls_log-altime = sy-timlo.
+  ls_log-aluser = sy-uname.
+  ls_log-alprog = lv_alprog.
+
+  call function 'BAL_LOG_CREATE'
+    exporting
+      i_s_log                       = ls_log
+   IMPORTING
+     E_LOG_HANDLE                  = lv_log_handle.
+
+
+  append lv_log_handle to t_log_handle.
+
+endmethod.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Private Method ZCL_MM_APPLICATION_LOG->SAVE_LOG
+* +-------------------------------------------------------------------------------------------------+
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+method SAVE_LOG.
+  CALL FUNCTION 'BAL_DB_SAVE'
+   EXPORTING
+     I_T_LOG_HANDLE             =   me->t_log_handle.
+endmethod.
+ENDCLASS.
