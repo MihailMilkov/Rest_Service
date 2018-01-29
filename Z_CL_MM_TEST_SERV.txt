@@ -15,6 +15,8 @@ private section.
 *"* private components of class Z_CL_MM_TEST_SERV
 *"* do not include other source files here!!!
 
+  data LOG_INSTANCE type ref to ZCL_MM_APPLICATION_LOG .
+
   methods GET_REST_METHOD
     importing
       !IO_SERVER type ref to IF_HTTP_SERVER
@@ -60,6 +62,9 @@ method GET_REST_METHOD.
   catch CX_SY_CREATE_OBJECT_ERROR into lx_create_obj.
     io_server->response->set_status( exporting code = '400'
                                                reason = 'Invalid HTTP Method' ).
+    create object me->log_instance.
+    me->log_instance->add_log( exporting iv_message_no = '009'
+                                         iv_message_type = 'E' ).
   endtry.
 
   ro_handler = lo_handler.
