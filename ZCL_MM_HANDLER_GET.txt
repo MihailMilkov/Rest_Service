@@ -25,6 +25,8 @@ private section.
   aliases RESPONSE
     for ZIF_REQUEST_HANDLER~RESPONSE .
 
+  data LOG_INSTANCE type ref to ZCL_MM_APPLICATION_LOG .
+
   methods CREATE_ZIP
     exporting
       !EV_ZIP type XSTRING .
@@ -48,6 +50,8 @@ method CONSTRUCTOR.
 
   me->request = io_request.
   me->response = io_response.
+
+  create object me->log_instance.
 
 endmethod.
 
@@ -94,22 +98,32 @@ method create_zip.
             when 1.
                 response->set_status( exporting code = 400
                                   reason = 'MIME Repository - parameter missing!' ).
+                me->log_instance->add_log( exporting iv_message_no = '000'
+                                                     iv_message_type = 'E' ).
                 return.
             when 2.
                 response->set_status( exporting code = 400
                                 reason = 'MIME Repository - error occured' ).
+                me->log_instance->add_log( exporting iv_message_no = '001'
+                                                     iv_message_type = 'E' ).
                 return.
             when 3.
                 response->set_status( exporting code = 404
                                 reason = 'Object not found in MIME Repository!' ).
+                me->log_instance->add_log( exporting iv_message_no = '002'
+                                                     iv_message_type = 'E' ).
                 return.
             when 4.
                 response->set_status( exporting code = 401
                                   reason = 'MIME Repository - authorization error!' ).
+                me->log_instance->add_log( exporting iv_message_no = '003'
+                                                     iv_message_type = 'E' ).
                 return.
             when 5.
                 response->set_status( exporting code = 400
                                   reason = 'Error occured in MIME Repository!' ).
+                me->log_instance->add_log( exporting iv_message_no = '004'
+                                                     iv_message_type = 'E' ).
                 return.
           endcase.
         endif.
@@ -128,6 +142,8 @@ method create_zip.
   else.
     response->set_status( exporting code = 404
                                     reason = 'Files not found!' ).
+    me->log_instance->add_log( exporting iv_message_no = '005'
+                                         iv_message_type = 'E' ).
   endif.
 
 endmethod.
@@ -173,6 +189,8 @@ method ZIF_REQUEST_HANDLER~HANDLE_REQUEST.
                                           value ='inline; filename=''UploadedFiles.zip''' ).
     response->GET_HEADER_FIELDS( changing fields = lt_header_fields ).
     response->SET_DATA( lv_zip ).
+    me->log_instance->add_log( exporting iv_message_no = '008'
+                                         iv_message_type = 'S' ).
   endif.
 endmethod.
 ENDCLASS.

@@ -24,6 +24,8 @@ private section.
     for ZIF_REQUEST_HANDLER~REQUEST .
   aliases RESPONSE
     for ZIF_REQUEST_HANDLER~RESPONSE .
+
+  data LOG_INSTANCE type ref to ZCL_MM_APPLICATION_LOG .
 ENDCLASS.
 
 
@@ -41,6 +43,8 @@ method CONSTRUCTOR.
 
   me->request = io_request.
   me->response = io_response.
+
+  create object me->log_instance.
 
 endmethod.
 
@@ -86,9 +90,13 @@ method ZIF_REQUEST_HANDLER~HANDLE_REQUEST.
    enddo.
    response->SET_STATUS( exporting code = 200
                                    reason = 'Files uploaded succesfully!' ).
+   me->log_instance->add_log( exporting iv_message_no = '006'
+                                        iv_message_type = 'S' ).
 else.
   response->SET_STATUS( exporting CODE = 400
                                   REASON = 'No files to upload!' ).
+  me->log_instance->add_log( exporting iv_message_no = '007'
+                                       iv_message_type = 'E' ).
 endif.
 endmethod.
 ENDCLASS.
