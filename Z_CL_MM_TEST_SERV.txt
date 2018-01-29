@@ -40,7 +40,9 @@ method GET_REST_METHOD.
   DATA: lt_header_fields type TIHTTPNVP,
         ls_header_fields like line of  lt_header_fields,
         lv_class_name type string,
-        lo_handler type ref to zif_request_handler.
+        lo_handler type ref to zif_request_handler,
+        lx_create_obj type ref to CX_SY_CREATE_OBJECT_ERROR,
+        msg_txt type string.
 
 
   io_server->request->get_header_fields( changing fields = lt_header_fields ).
@@ -49,11 +51,16 @@ method GET_REST_METHOD.
 
   concatenate lv_class_prefix ls_header_fields-value into lv_class_name.
 
+  try.
   create object lo_handler
     type (lv_class_name)
     exporting
       IO_REQUEST = io_server->request
       io_response = io_server->response.
+  catch CX_SY_CREATE_OBJECT_ERROR into lx_create_obj.
+    io_server->response->set_status( exporting code = '400'
+                                               reason = 'Invalid HTTP Method' ).
+  endtry.
 
   ro_handler = lo_handler.
 
@@ -70,7 +77,8 @@ METHOD if_http_extension~handle_request.
  DATA: lo_handler type ref to zif_request_handler.
 
   lo_handler = get_rest_method( io_server = server ).
-  lo_handler->handle_request( ).
-
+  if lo_handler is bound.
+     lo_handler->handle_request( ).
+  endif.
 ENDMETHOD.
 ENDCLASS.
